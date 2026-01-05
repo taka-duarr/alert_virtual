@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Status Sistem</h2>
+  <h1 id="status">MENUNGGU DATA...</h1>
+
+  <!-- Audio alarm -->
+  <audio id="alarm" src="alarm.mp3" preload="auto"></audio>
+  <button onclick="initAudio()">🔊 Aktifkan Alarm</button>
+
+<script>
+function initAudio() {
+  const alarm = document.getElementById("alarm");
+  alarm.play().then(() => {
+    alarm.pause();
+    alarm.currentTime = 0;
+    alert("Alarm siap!");
+  });
+}
+</script>
+
+
+  <script>
+    const ws = new WebSocket("ws://192.168.0.163:8765");
+    const alarm = document.getElementById("alarm");
+    let alarmOn = false;
+
+    ws.onmessage = e => {
+      const data = JSON.parse(e.data);
+
+      document.getElementById("status").innerText =
+        data.message + " [" + data.status + "]";
+
+      // Jika suhu tinggi → bunyikan alarm
+      if (data.status === "BAHAYA" || data.status === "PERINGATAN") {
+        if (!alarmOn) {
+          alarm.play().catch(() => {});
+          alarmOn = true;
+        }
+      } else {
+        // jika kembali aman → matikan alarm
+        alarm.pause();
+        alarm.currentTime = 0;
+        alarmOn = false;
+      }
+    };
+  </script>
+</body>
+</html>

@@ -35,7 +35,7 @@ def send_udp():
     while True:
         payload = {
             "token": TOKEN,
-            "device_id": "Gedung A Ruang A404",
+            "device_id": "Gedung H Ruang H3 405",
             "temperature": suhu
         }
 

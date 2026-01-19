@@ -1,49 +1,192 @@
 <!DOCTYPE html>
-<html>
-<body>
-  <h2>Status Sistem</h2>
-  <h1 id="status">MENUNGGU DATA...</h1>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>IoT Alert Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Audio alarm -->
-  <audio id="alarm" src="alarm.mp3" preload="auto"></audio>
-  <button onclick="initAudio()">🔊 Aktifkan Alarm</button>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #1e293b;
+      color: white;
+      padding: 16px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .container {
+      padding: 16px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .toolbar {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      border-left: 6px solid #22c55e;
+    }
+
+    .card.bahaya {
+      border-left-color: #dc2626;
+      background: #fee2e2;
+    }
+
+    .card.peringatan {
+      border-left-color: #f59e0b;
+      background: #fef3c7;
+    }
+
+    .device {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .status {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .temp {
+      font-size: 13px;
+      color: #374151;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+      padding: 16px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  🔥 IoT Alert System
+</header>
+
+<div class="container">
+
+  <div class="toolbar">
+    <button onclick="initAudio()">🔊 Aktifkan Alarm</button>
+  </div>
+
+  <div id="grid" class="grid">
+    <!-- sensor cards -->
+  </div>
+
+</div>
+
+<footer>
+  Monitoring realtime via WebSocket
+</footer>
+
+<!-- Audio alarm -->
+<audio id="alarm" src="alarm.mp3" loop></audio>
 
 <script>
+const ws = new WebSocket("ws://192.168.14.72:8765");
+const alarm = document.getElementById("alarm");
+const grid = document.getElementById("grid");
+
+let audioReady = false;
+let sensors = {}; // simpan data sensor
+
 function initAudio() {
-  const alarm = document.getElementById("alarm");
   alarm.play().then(() => {
     alarm.pause();
     alarm.currentTime = 0;
-    alert("Alarm siap!");
+    audioReady = true;
+    alert("Alarm siap digunakan!");
+  }).catch(() => {
+    alert("Klik tombol untuk mengaktifkan audio.");
   });
+}
+
+ws.onmessage = e => {
+  const data = JSON.parse(e.data);
+
+  sensors[data.device_id] = {
+    status: data.status,
+    temperature: data.temperature
+  };
+
+  render();
+  checkAlarm();
+};
+
+function render() {
+  grid.innerHTML = "";
+
+  for (const id in sensors) {
+    const s = sensors[id];
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    if (s.status === "BAHAYA") card.classList.add("bahaya");
+    if (s.status === "PERINGATAN") card.classList.add("peringatan");
+
+    card.innerHTML = `
+      <div class="device">${id}</div>
+      <div class="status">Status: ${s.status}</div>
+      <div class="temp">Suhu: ${s.temperature.toFixed(1)} °C</div>
+    `;
+
+    grid.appendChild(card);
+  }
+}
+
+function checkAlarm() {
+  if (!audioReady) return;
+
+  const danger = Object.values(sensors)
+    .some(s => s.status === "BAHAYA");
+
+  if (danger) {
+    alarm.play();
+  } else {
+    alarm.pause();
+    alarm.currentTime = 0;
+  }
 }
 </script>
 
-
-  <script>
-    const ws = new WebSocket("ws://192.168.0.163:8765");
-    const alarm = document.getElementById("alarm");
-    let alarmOn = false;
-
-    ws.onmessage = e => {
-      const data = JSON.parse(e.data);
-
-      document.getElementById("status").innerText =
-        data.message + " [" + data.status + "]";
-
-      // Jika suhu tinggi → bunyikan alarm
-      if (data.status === "BAHAYA" || data.status === "PERINGATAN") {
-        if (!alarmOn) {
-          alarm.play().catch(() => {});
-          alarmOn = true;
-        }
-      } else {
-        // jika kembali aman → matikan alarm
-        alarm.pause();
-        alarm.currentTime = 0;
-        alarmOn = false;
-      }
-    };
-  </script>
 </body>
 </html>

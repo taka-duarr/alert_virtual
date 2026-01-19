@@ -1,9 +1,21 @@
 def check_threshold(data):
-    t = data.get("temperature", 0)
+    t = float(data.get("temperature", 0))
 
     if t >= 60:
-        return {"status": "BAHAYA", "message": f"🔥 KEBAKARAN ({t}°C)"}
+        return {
+            "status": "BAHAYA",
+            "temperature": t,
+            "message": "🔥 KEBAKARAN"
+        }
     elif t >= 50:
-        return {"status": "PERINGATAN", "message": f"⚠️ SUHU TINGGI ({t}°C)"}
+        return {
+            "status": "PERINGATAN",
+            "temperature": t,
+            "message": "⚠️ SUHU TINGGI"
+        }
     else:
-        return {"status": "AMAN", "message": f"🟢 AMAN ({t}°C)"}
+        return {
+            "status": "AMAN",
+            "temperature": t,
+            "message": "🟢 AMAN"
+        }

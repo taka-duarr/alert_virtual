@@ -23,18 +23,27 @@ async def ws_handler(ws):
         ws_clients.remove(ws)
 
 async def ws_server():
+    global ws_loop
+    ws_loop = asyncio.get_running_loop()
+
     async with websockets.serve(ws_handler, "0.0.0.0", 8765):
         print("🌐 WebSocket aktif (8765)")
         await asyncio.Future()
 
+
 def ws_broadcast(message):
+    if ws_loop is None:
+        return
+
     async def _send():
         for c in list(ws_clients):
             try:
                 await c.send(json.dumps(message))
             except:
                 ws_clients.remove(c)
-    asyncio.run(_send())
+
+    asyncio.run_coroutine_threadsafe(_send(), ws_loop)
+
 
 # ======================
 # UDP SERVER (SENSOR)
@@ -54,7 +63,7 @@ def udp_server():
             continue
 
         result = check_threshold(payload)
-        print("📥", addr, result)
+        result["device_id"] = payload.get("device_id", "unknown")
 
         ws_broadcast(result)
 
